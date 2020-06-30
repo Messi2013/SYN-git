@@ -3,8 +3,8 @@ import numpy as np
 import cv2
 import shutil
 
-videos_frames_src_path = "/home/xinyi/Dataset/Syn/warp_flow_original/cam2/"
-videos_frames_save_path = "/home/xinyi/Dataset/Syn/flows_group/cam2/"
+videos_frames_src_path = "/scratch/meil3/SYN_DB/MPV/train/img/cam1/"
+videos_frames_save_path = "/scratch/meil3/SYN_DB/MPV/flows_group/cam1/"
 
 # get each video frames path
 each_video_frame_full_path = []

@@ -1,11 +1,11 @@
 # PyTorch includes
+import ipdb
 import os
 from torch.utils.data import Dataset
 import numpy as np
 from skimage.transform import resize
 # Custom includes
 from dataloader import *
-
 
 
 def bboximg(img_path_cam_rgb,img_path_cam_bbox):
@@ -59,7 +59,8 @@ class SYN(Dataset):
         self.epoch = epoch
         self.batch = batch
         self.clip_len = clip_lenth
-        self.downsample = 1
+        # self.downsample = 1
+        self.downsample = 4
         self.mode = 2
 
         # syn path
@@ -83,17 +84,24 @@ class SYN(Dataset):
         #     name_list = ['1','2','3','4']
 
         # mtp path
-        if self.train:
-            self.video_cam1_path = os.path.join(db_root_dir, 'poses_group/cam1/P')
-            self.video_cam2_path = os.path.join(db_root_dir, 'poses_group/cam2/P')
-            name_list = ['0','5','7']
+        if self.train:#display false usually even if L56, maybe L56 changes L49 train's status of True
+            self.video_cam1_path = os.path.join(db_root_dir, 'SYN_DB/MPV/train/pose1/cam1')
+            self.video_cam2_path = os.path.join(db_root_dir, 'SYN_DB/MPV/train/pose1/cam2')
+            name_list = ['0','5','7']#the order is only the frame clip sequence, such as 1-240, 241-480,..., the group are same, only different tome. 
+            # name_list = ['10']
         else:
-            self.video_cam1_path = os.path.join(db_root_dir, 'poses_group/cam1/P')
-            self.video_cam2_path = os.path.join(db_root_dir, 'poses_group/cam2/P')
+            self.video_cam1_path = os.path.join(db_root_dir, 'SYN_DB/MPV/test/pose1/cam1')
+            self.video_cam2_path = os.path.join(db_root_dir, 'SYN_DB/MPV/test/pose1/cam2')
             name_list = ['3','5','7']
 
-        self.video_cam1 = np.sort(os.listdir(self.video_cam1_path))
-        self.video_cam2 = np.sort(os.listdir(self.video_cam2_path))
+        # ipdb.set_trace()
+
+        # self.video_cam1 = np.sort(os.listdir(self.video_cam1_path)) #--> not the correct way to sort the folders (list of string of numbers)
+        # self.video_cam2 = np.sort(os.listdir(self.video_cam2_path))
+        self.video_cam1 = os.listdir(self.video_cam1_path)
+        self.video_cam2 = os.listdir(self.video_cam2_path)
+        self.video_cam1 = sorted(self.video_cam1, key=lambda x: int(x)) 
+        self.video_cam2 = sorted(self.video_cam2, key=lambda x: int(x))
 
         self.img_cam1_list = []
         self.img_cam2_list = []
@@ -101,26 +109,52 @@ class SYN(Dataset):
         self.group_name_path_cam1 = []
         self.group_name_path_cam2 = []
 
-        for n in range(len(self.video_cam1)):
+        for n in range(len(self.video_cam1)): # len(self.video_cam1) is: 38
+            
             each_video_path_cam1 = os.path.join(self.video_cam1_path, self.video_cam1[n])
+            # print('each_video_path_cam1', each_video_path_cam1)
             each_video_path_cam2 = os.path.join(self.video_cam2_path, self.video_cam2[n])
+            # print('each_video_path_cam2', each_video_path_cam2)
 
-            group_name = os.listdir(each_video_path_cam1)
-            group_name.sort(key=int)
+            #group_name = os.listdir(each_video_path_cam1)
+            #group_name.sort(key=int)
 
-            self.group_name = group_name
+            #self.group_name = group_name
 
-            for j in range(len(name_list)):
-                group_name_cam1 = os.listdir(os.path.join(each_video_path_cam1, name_list[j]))
-                group_name_cam1.sort(key=lambda x: int(x[:-4]))
-                group_name_cam2 = os.listdir(os.path.join(each_video_path_cam2, name_list[j]))
-                group_name_cam2.sort(key=lambda x: int(x[:-4]))
+            cam1_frames_name = os.listdir(each_video_path_cam1)
+            cam2_frames_name = os.listdir(each_video_path_cam2)
 
-                self.group_name_path_cam1.append(os.path.join(each_video_path_cam1, name_list[j]))
-                self.group_name_path_cam2.append(os.path.join(each_video_path_cam2, name_list[j]))
+            cam1_frames_numbers = list(map(lambda x: os.path.splitext(x)[0], cam1_frames_name))
+            cam2_frames_numbers = list(map(lambda x: os.path.splitext(x)[0], cam2_frames_name))
 
-                self.img_cam1_list.append(group_name_cam1)
-                self.img_cam2_list.append(group_name_cam2)
+            group_name_cam1_numbers = sorted(cam1_frames_numbers, key=lambda x: int(x))
+            group_name_cam2_numbers = sorted(cam2_frames_numbers, key=lambda x: int(x))
+
+            group_name_cam1 = list(map(lambda x: x + '.npy', group_name_cam1_numbers))
+            group_name_cam2 = list(map(lambda x: x + '.npy', group_name_cam2_numbers))
+         
+            self.group_name_path_cam1.append(each_video_path_cam1)
+            self.group_name_path_cam2.append(each_video_path_cam2)
+
+            self.img_cam1_list.append(group_name_cam1)
+            self.img_cam2_list.append(group_name_cam2)
+
+            #for j in range(len(name_list)):
+            #    group_name_cam1 = os.listdir(os.path.join(each_video_path_cam1, name_list[j]))
+            #    group_name_cam1.sort(key=lambda x: int(x[:-4]))
+            #    group_name_cam2 = os.listdir(os.path.join(each_video_path_cam2, name_list[j]))
+            #    group_name_cam2.sort(key=lambda x: int(x[:-4]))
+
+            #    self.group_name_path_cam1.append(os.path.join(each_video_path_cam1, name_list[j]))
+            #    self.group_name_path_cam2.append(os.path.join(each_video_path_cam2, name_list[j]))
+
+            #    self.img_cam1_list.append(group_name_cam1)
+            #    self.img_cam2_list.append(group_name_cam2)
+            
+        # print('self.img_cam1_list',self.img_cam1_list)
+        # print('self.img_cam2_list',self.img_cam2_list)
+        # print('self.group_name_path_cam1',self.group_name_path_cam1)
+        # print('self.group_name_path_cam2',self.group_name_path_cam2)
 
     def __getitem__(self, idx):
 
@@ -128,21 +162,30 @@ class SYN(Dataset):
             video_item = (idx // self.clip_len) * self.batch
         else:
             video_item = (idx // (self.clip_len*2)) * self.batch
+        # ipdb.set_trace()
+        for video_num in range(video_item, video_item + self.batch): #video_num is the sequence NO. under scratch-pose-npy's foulder
 
-        for video_num in range(video_item, video_item + self.batch):
-
-            img_num = len(os.listdir(self.group_name_path_cam1[video_num])) / self.downsample
-
-            offset = 0
-
+            img_num = len(os.listdir(self.group_name_path_cam1[video_num])) / self.downsample#sample with an interval the 240 npys in a foulder
+            print("img_num",img_num)
+            # offset = 0 # np.random(0, 10)
+            offset = np.random.random_integers(-4, 3)#only 0-7 can run without bug, if 8 will exceed the range of offset (clip-len=8)
+            # if offset == 8:
+            #     offset = 255
+            print("offset", offset)
             # random get 30 frame in the a group (total 210 group) for each cam
             if self.train:
-                t = random.randint(self.clip_len/2, img_num-self.clip_len*3/2)
+                # TODO: change the bounds
+                # ipdb.set_trace()
+                first_possible_index = self.clip_len/2 # =4
+                last_possible_index = img_num-self.clip_len*3/2 # =240-12=228
+                t = random.randint(first_possible_index, last_possible_index)
             else:
                 if idx % (self.clip_len*2) < self.clip_len:
-                    t = self.clip_len/2
+                    t = int(self.clip_len/2)
                 else:
-                    t = self.clip_len
+                    t = int(self.clip_len)
+            # print("t",t)
+            # print("self.clip_len",self.clip_len)
 
             clip_cam1 = []
             clip_cam2 = []
@@ -153,22 +196,54 @@ class SYN(Dataset):
             clip_cam1_flowy = []
             clip_cam2_flowy = []
 
-
+            # ipdb.set_trace()
             for k in range(self.clip_len):
-                img_path_cam1 = os.path.join(self.group_name_path_cam1[video_num],
-                                             self.img_cam1_list[video_num][::self.downsample][t:t + self.clip_len][k])
+                # Maybe:Helge require to print
+                # print(len(self.img_cam1_list[video_num][::self.downsample]))
+                # print(self.downsample, t, self.clip_len, k)
+                # ipdb.set_trace()
+                img_path_cam1 = os.path.join(self.group_name_path_cam1[video_num], 
+                                             self.img_cam1_list[video_num][::self.downsample][t:t + self.clip_len][k])#[::step] seq[start:end:step]，video_num is the cam1 or 2's index
+                # print("img_path_cam1", img_path_cam1) # /scratch/meil3/SYN_DB/MPV/train/pose1/cam1/30/7434.npy
+
+                # print("list", len(self.img_cam2_list[video_num][::self.downsample]))
+                # print("index",t + offset, t + self.clip_len + offset)
+                #S3.2
                 img_path_cam2 = os.path.join(self.group_name_path_cam2[video_num],
                                              self.img_cam2_list[video_num][::self.downsample][t + offset:t + self.clip_len + offset][k])
 
+                # debugging code
+                entire_sequence1 = self.img_cam1_list[video_num][::self.downsample]
+                entire_sequence2 = self.img_cam2_list[video_num][::self.downsample]
+                # lets assume len(entire_sequence1)=200
+                subsequencee_sequence1 = entire_sequence1[t:t + self.clip_len]
+                subsequencee_sequence2 = entire_sequence2[t + offset:t + self.clip_len + offset]
+                # problem if (t + self.clip_len + offset > 200), then len(subsequencee_sequence2)<len(subsequencee_sequence1)
+                # Helge
+                # print("subsequencee_sequence1", len(subsequencee_sequence1))
+                # print("subsequencee_sequence2", len(subsequencee_sequence2))
+
+                portion = os.path.splitext(img_path_cam1)
+                # ipdb.set_trace()
+                img_path_cam1 = portion[0] + ".npy"
+
                 if self.mode % 2 == 0:
-                    img1 = np.load(img_path_cam1)
+                    # print('img_path_cam1',img_path_cam1)
+                    # print('img_path_cam2',img_path_cam2)
+                    # print('img_path_cam2',img_path_cam2)
+                    img1 = np.load(img_path_cam1, allow_pickle=True) # frame
+                    #img1.permute(2, 0, 1).size()
+                    img1 =  img1.transpose(2, 1, 0)
+                    # print('img1 shape', img1.shape)
                     img_cam1 = np.array(img1, dtype=np.float32)
-                    clip_cam1.append(img_cam1)
+                    clip_cam1.append(img_cam1) # keep appending until length == clip_length
                     img2 = np.load(img_path_cam2)
+                    img2 =  img2.transpose(2, 1, 0)
                     img_cam2 = np.array(img2, dtype=np.float32)
                     clip_cam2.append(img_cam2)
 
                     cam1 = np.stack(clip_cam1)
+                    # print('cam1 shape', cam1.shape)
                     cam2 = np.stack(clip_cam2)
 
 
@@ -212,14 +287,16 @@ class SYN(Dataset):
 
                 lbl = offset + self.clip_len/2
 
+                print("lbl", lbl)
+
         if self.mode == 2:
-            return cam1, cam2, lbl
+            return cam1, cam2, lbl # currently: heatmap1, heatmap2, label
         if self.mode == 3:
             return cam1_rgb, cam2_rgb, lbl
         if self.mode == 5:
-            return cam1_flowx, cam2_flowx, cam1_flowy, cam2_flowy, lbl
+            return cam1_flowx, cam2_flowx, cam1_flowy, cam2_flowy, lbl # DODO2: optical flow on top
         if self.mode == 6:
-            return cam1, cam2, cam1_rgb, cam2_rgb, lbl
+            return cam1, cam2, cam1_rgb, cam2_rgb, lbl # TODO1: return this: heatmap1, heatmap2, image1, image2, label
         if self.mode == 10:
             return cam1, cam2, cam1_flowx, cam2_flowx, cam1_flowy, cam2_flowy, lbl
         if self.mode == 15:
@@ -244,10 +321,10 @@ if __name__ == '__main__':
 
     dataset = SYN(db_root_dir='/home/xinyi/Dataset/Syn',
                   train=True, transform=transforms, epoch=1, batch=1)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, num_workers=1)
-    print(len(dataloader))
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
+    print('len(dataloader)', len(dataloader))
     for i, (cam1, cam2, lbl) in enumerate(dataloader):
         # loss = train(cam1,cam2,lbl)
-        print (cam2.shape)
+        # print (cam2.shape)
         if i == 2:
             break

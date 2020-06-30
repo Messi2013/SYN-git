@@ -25,7 +25,7 @@ device_ids = [0]
 num_epoch = 501
 learning_rate = 1e-4
 weight_decay = 5e-4
-resume = '/home/zhenyao/SYN_CMP2/model/vis/best_checkpoint.pth'
+resume = '/ubc/cs/home/m/meil3/Code/SYN/model/vis/checkpoint-50.pth'
 evaluate = True
 clip_len = 8
 
@@ -38,7 +38,7 @@ transforms = transforms.Compose(
                          std=[0.229, 0.224, 0.225])
 )
 
-
+# Main function
 def main():
     best_prec = -1
 
@@ -51,7 +51,7 @@ def main():
     test_dataset = SYN(db_root_dir=db_root_dir,
                        train=False, transform=transforms, epoch=None, batch=1, clip_lenth=clip_len)
 
-    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=0, pin_memory=True)
 
     # Build model
     print ("==================>Build model.")
@@ -118,7 +118,7 @@ def test(test_loader, model, test_writer):
 
 
 def get_pred(result):
-    result = torch.squeeze(result.cpu())
+    result = torch.squeeze(result.cpu()) #get the value:loss.cpu().detach().numpy()
     result = result.detach().numpy()
     pred = np.argmax(result)
 

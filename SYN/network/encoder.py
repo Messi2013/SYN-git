@@ -1,4 +1,5 @@
 from __future__ import print_function
+import ipdb
 import torch
 import torch.nn as nn
 import torch.utils.data
@@ -35,12 +36,14 @@ class BasicBlock(nn.Module):
 
         return out
 
-
+#S3.1 Deep Feature Extraction,maybe use resnet50
 class feature_extraction(nn.Module):
     def __init__(self):
         super(feature_extraction, self).__init__()
+        # ipdb.set_trace()
         self.inplanes = 32
-        self.firstconv = nn.Sequential(convbn(18, 32, 3, 2, 1, 1),
+        # Helge: set it to 19 from 18
+        self.firstconv = nn.Sequential(convbn(19, 32, 3, 2, 1, 1),
                                        nn.ReLU(inplace=True),
                                        convbn(32, 32, 3, 2, 1, 1),
                                        nn.ReLU(inplace=True),
@@ -76,7 +79,9 @@ class feature_extraction(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        # ipdb.set_trace()
         output = self.firstconv(x)
+        # print('output.shape=', output.shape)
         output = self.layer1(output)
         output_raw = self.layer2(output)
         output = self.layer3(output_raw)
@@ -85,12 +90,14 @@ class feature_extraction(nn.Module):
 
         return output
 
-class fcn(nn.Module):
+# ReLU-Pooling：In total, five ConvolutionReLU-Pooling structures are used to 
+# get the output with a dimension of F = 256. 
+class fcn(nn.Module):  
     def __init__(self):
         super(fcn, self).__init__()
-        self.conv1 = nn.Conv2d(64, 96, 3, padding=1)
+        self.conv1 = nn.Conv2d(64, 96, 3, padding=1)#3x3 conv layer
         self.relu1 = nn.ReLU(inplace=True)
-        self.pool1 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+        self.pool1 = nn.MaxPool2d(2, stride=2, ceil_mode=True)#max pooling layer:1st 2 is kernel, while 2nd 2 is the stride size
 
         self.conv2 = nn.Conv2d(96, 128, 3, padding=1)
         self.relu2 = nn.ReLU(inplace=True)
@@ -132,7 +139,9 @@ class ConvEncoder(nn.Module):
     def forward(self, clips):
         # Permute to run encoder on batch of each frame
         # NOTE: This requires clips to have the same number of frames!!
-        frame_ordered_clips = clips.permute(1, 0, 4, 2, 3)
+        # print('clips01=',clips.shape)
+        frame_ordered_clips = clips.permute(1, 0, 2, 3, 4)
+        # print('clips02=',frame_ordered_clips.shape)
         clips_feature_maps = [self.encoder(frame) for frame in frame_ordered_clips]
 
         return torch.stack(clips_feature_maps, dim=0).permute(1, 0, 2, 3, 4)

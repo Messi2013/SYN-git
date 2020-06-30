@@ -89,7 +89,7 @@ def get_outputs(img, model, preprocess):
     # padding
     im_croped, im_scale, real_shape = im_transform.crop_with_factor(
         img, inp_size, factor=cfg.MODEL.DOWNSAMPLE, is_ceil=True)
-
+    #print('preprocess = ', preprocess)
     if preprocess == 'rtpose':
         im_data = rtpose_preprocess(im_croped)
 

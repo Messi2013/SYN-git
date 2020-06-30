@@ -1,6 +1,8 @@
 # Code extends https://github.com/ndrplz/ConvLSTM_pytorch/blob/master/convlstm.py
 
 import torch.nn as nn
+import numpy as np
+import ipdb
 from torch.autograd import Variable
 import torch
 
@@ -50,7 +52,8 @@ class BiConvLSTMCell(nn.Module):
 
     def forward(self, input_tensor, cur_state):
         h_cur, c_cur = cur_state
-
+        # print('input_tensor=',input_tensor.shape)
+        # print('h_cur=',h_cur.shape)
         combined = torch.cat([input_tensor, h_cur], dim=1)  # concatenate along channel axis
         combined_conv = self.conv(combined)
         cc_i, cc_f, cc_o, cc_g = torch.split(combined_conv, self.hidden_dim, dim=1)
@@ -77,9 +80,9 @@ class BiConvLSTM(nn.Module):
         if not len(kernel_size) == len(hidden_dim) == num_layers:
             raise ValueError('Inconsistent list length.')
 
-        self.height, self.width = input_size
+        self.height, self.width = input_size  #12,4
 
-        self.input_dim = input_dim
+        self.input_dim = input_dim  #64
         self.hidden_dim = hidden_dim
         self.kernel_size = kernel_size
         self.num_layers = num_layers
@@ -97,7 +100,7 @@ class BiConvLSTM(nn.Module):
         self.cell_list = nn.ModuleList(cell_list)
 
     def forward(self, input_tensor):
-
+        # ipdb.set_trace()
         hidden_state = self._init_hidden(batch_size=input_tensor.size(0), cuda=input_tensor.is_cuda)
 
         layer_output_list = []
@@ -110,8 +113,11 @@ class BiConvLSTM(nn.Module):
             forward_states = []
             output_inner = []
 
-            hb, cb = hidden_state[layer_idx]
+           
+            hb, cb = hidden_state[layer_idx] #hb,cb([1, 64, 12, 4])
             for t in range(seq_len):
+                #print('hb=',(np.array(hb)).shape,' cb=',(np.array(cb)).shape,' [hb cb]=',(np.array([hb,cb])).shape)
+                #print('hb=',len(hb),' cb=',len(cb),' [hb cb]=',len([hb,cb]))
                 hb, cb = self.cell_list[layer_idx](input_tensor=cur_layer_input[:, seq_len - t - 1, :, :, :], cur_state=[hb, cb])
                 backward_states.append(hb)
 

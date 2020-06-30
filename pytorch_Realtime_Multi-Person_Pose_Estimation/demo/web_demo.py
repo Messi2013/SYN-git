@@ -1,3 +1,4 @@
+#3.25
 import os
 import re
 import sys
@@ -48,7 +49,7 @@ model.eval()
 
 if __name__ == "__main__":
     
-    video_capture = cv2.VideoCapture(0)
+    video_capture = cv2.VideoCapture(-1)
 
     while True:
         # Capture frame-by-frame

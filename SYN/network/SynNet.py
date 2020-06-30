@@ -1,4 +1,5 @@
 # PyTorch includes
+import ipdb
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,8 +18,9 @@ class SynNet(nn.Module):
         self.clip_len = clip_len
         self.convenc = ConvEncoder()
         self.fcn = FCN()
-        self.biconvlstm = BiConvLSTM(input_size=(12, 4), input_dim=64, hidden_dim=64, kernel_size=(3, 3), num_layers=1)
-        self.fc = nn.Linear(64*12*4, 256)
+        # ipdb.set_trace()
+        self.biconvlstm = BiConvLSTM(input_size=(3, 2), input_dim=64, hidden_dim=64, kernel_size=(3, 3), num_layers=1)#input_size=(12, 4)
+        self.fc = nn.Linear(64*3*2, 256) #self.fc = nn.Linear(64*12*4, 256)
         self.fc2 = nn.Linear(512, 64)
         self.classification = Classification(in_size=(clip_len, 128), in_channels=clip_len, num_classes=clip_len)
 
@@ -26,7 +28,11 @@ class SynNet(nn.Module):
         # self.convlstm = ConvLSTM(input_size=(14, 14), input_dim=512, hidden_dim=512, kernel_size=(3, 3), num_layers=1)
         # self.classification = Classification(in_size=(14, 14), in_channels=512, num_classes=num_classes)
 
+#Global feature encoding 
     def forward(self, clips1, clips2, clip_len):
+        # ipdb.set_trace()
+        # print('clips1=',clips1.shape)
+        # print('clips2=',clips2.shape)
         clips1 = self.convenc(clips1.float())
         clips2 = self.convenc(clips2.float())
         clips1_fcn = self.fcn(clips1)
@@ -34,11 +40,14 @@ class SynNet(nn.Module):
         clips1_fcn = clips1_fcn.reshape(clip_len, 256)
         clips2_fcn = clips2_fcn.reshape(clip_len, 256)
 
-
+        # temporal feature encoding
+        # print('clips11=',clips1.shape) # Helge
+        # print('clips22=',clips2.shape)
         clips1 = self.biconvlstm(clips1)
         clips2 = self.biconvlstm(clips2)
         clips1 = torch.squeeze(clips1)
         clips2 = torch.squeeze(clips2)
+        # Mei-0403: Following line's error is related to the two updates of L22-23's size
         clips1 = torch.stack([self.fc(frame.view(-1)) for frame in clips1], dim=0)
         clips2 = torch.stack([self.fc(frame.view(-1)) for frame in clips2], dim=0)
 
@@ -53,18 +62,20 @@ class SynNet(nn.Module):
         cost = torch.FloatTensor(1, clip_len, clips1.size()[0],
                                  clips1.size()[1]*2).zero_().cuda()
 
-        for j in range(-clip_len/2, clip_len/2):
+        # Helge: matching cost volume creation
+        for j in range(-clip_len//2, clip_len//2):
             if j == 0:
-                cost[:, j+clip_len/2, :, :clips1.size()[1]] = clips1
-                cost[:, j+clip_len/2, :, clips2.size()[1]:] = clips2
+                cost[:, j+clip_len//2, :, :clips1.size()[1]] = clips1
+                cost[:, j+clip_len//2, :, clips2.size()[1]:] = clips2
             elif j > 0:
-                cost[:, j+clip_len/2, j:, :clips1.size()[1]] = clips1[j:, :]
-                cost[:, j+clip_len/2, j:, clips2.size()[1]:] = clips2[:-j, :]
+                cost[:, j+clip_len//2, j:, :clips1.size()[1]] = clips1[j:, :]
+                cost[:, j+clip_len//2, j:, clips2.size()[1]:] = clips2[:-j, :]
             else:
-                cost[:, j+clip_len/2, :j, :clips1.size()[1]] = clips1[:j, :]
-                cost[:, j+clip_len/2, :j, clips2.size()[1]:] = clips2[-j:, :]
+                cost[:, j+clip_len//2, :j, :clips1.size()[1]] = clips1[:j, :]
+                cost[:, j+clip_len//2, :j, clips2.size()[1]:] = clips2[-j:, :]
 
         # Max pool :)
+        # ipdb.set_trace()
         classification = self.classification(cost)
         return {'classification': classification}
 
